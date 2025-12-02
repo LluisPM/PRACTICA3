@@ -10,6 +10,18 @@ import matplotlib.pyplot as plt
 # ------- IMPLEMENT HERE ANY AUXILIARY FUNCTIONS NEEDED ------- #
 
 
+# -*- coding: utf-8 -*-
+
+from Bio.SeqRecord import SeqRecord
+from Bio import SeqIO
+import csv
+import networkx as nx
+import matplotlib.pyplot as plt
+
+
+# ------- IMPLEMENT HERE ANY AUXILIARY FUNCTIONS NEEDED ------- #
+
+
 
 
 # --------------- END OF AUXILIARY FUNCTIONS ------------------ #
@@ -138,7 +150,7 @@ if __name__ == "__main__":
 
     #PREGUNTA B
     dif = []
-    for a,b in zip(dis_in_G2,dis_in_G1):
+    for a,b in zip(dis_in_G2[0],dis_in_G1[0]):
         numero = a-b
         dif.append(numero)
     plt.hist(dif, bins=range(max(dif)+2), edgecolor="black")
@@ -172,44 +184,39 @@ if __name__ == "__main__":
         print(f"  {node}  (in-degree = {val}, tipo = {G2.nodes[node].get('ntype')}, gene = {G2.nodes[node].get('name')})")
 
     print("\nTop 10 nodos con mayor OUT-degree:")
-    for node, val in top_out_G2.items():  
-         print(f"  {node}  (out-degree = {val}, tipo = {G2.nodes[node].get('ntype')}, gene = {G2.nodes[node].get('name')})")
+    for node, val in top_out_G2.items():
+        print(f"  {node}  (out-degree = {val}, tipo = {G2.nodes[node].get('ntype')}, gene = {G2.nodes[node].get('name')})")
 
-    
-    #Pregunta D
-    #Malament
-    dist_vals = [10, 50,100, 150, 200]
+    # Pregunta D
+
+    dist_vals = [10, 50, 100, 150, 200]
 
     resultats = {}
 
     for dist in dist_vals:
-        print(f"Generant xarxa amb intergenic_dist = {dist} ...")
-       
-        
-    
-    
-    # mida de la CC més gran
-    # primer cal passar el graf a no-dirigit
-    UG = G.to_undirected()
-    H = largest_CC_graph(UG)
-    
-    resultats[dist] = {
-        "nodes": G.number_of_nodes(),
-        "edges": G.number_of_edges(),
-        "largestCC": H.number_of_nodes(),
-        "avg_degree": sum(dict(G.degree()).values()) / G.number_of_nodes()
-    }
-    print("\n=== Resultats comparatius ===")
 
-    for dist, info in resultats.items():
+        UG = G2.to_undirected()
+        H = largest_CC_graph(UG)
+
+        graus = dict(G2.degree())
+        avg_degree = sum(graus.values()) / G2.number_of_nodes()
+
+        resultats[dist] = {
+            "nodes": G2.number_of_nodes(),
+            "edges": G2.number_of_edges(),
+            "largestCC": H.number_of_nodes(),
+            "avg_degree": avg_degree
+        }
+
+    print("\nResultats comparatius operon networks:")
+    for dist in sorted(resultats.keys()):
+        info = resultats[dist]
         print(f"\n--- Distància {dist} ---")
         print(f"Nodes: {info['nodes']}")
         print(f"Arestes: {info['edges']}")
         print(f"Mida de la largest CC: {info['largestCC']}")
         print(f"Grau mitjà: {info['avg_degree']:.2f}")
 
-
-    print("--- %s seconds ---" % (time.time() - start_time))
 
 
     
