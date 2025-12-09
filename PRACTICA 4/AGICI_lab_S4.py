@@ -8,170 +8,130 @@ import matplotlib.pyplot as plt
 from itertools import combinations
 
 
-# ------- IMPLEMENT HERE ANY AUXILIARY FUNCTIONS NEEDED ------- #
+# ------- AUXILIARY FUNCTIONS ------- #
 
 
 
 # --------------- END OF AUXILIARY FUNCTIONS ------------------ #
 
+
 def largest_CC_graph(G: nx.Graph) -> nx.Graph:
-    '''Generate the largest connected component graph.
-
-    Parameters
-    ----------
-    - param: G : Networkx graph
-        Graph to analyze
-    - return: Networkx graph
-        The graph corresponding to the largest connected component in G
-    '''
-
-    
-    # ------- IMPLEMENT HERE THE BODY OF THE FUNCTION ------- #
     if G.is_directed():
-        component=max(list(nx.weakly_connected_components(G)))        
+        component = max(list(nx.weakly_connected_components(G)))
     else:
-        component=max(list(nx.connected_components(G)))
+        component = max(list(nx.connected_components(G)))
 
-    if G.number_of_nodes==0:
+    if G.number_of_nodes() == 0:
         return nx.Graph(G)
-    
-    subgraf=G.subgraph(component)
-    return subgraf
 
-
-
-
-    # ----------------- END OF FUNCTION --------------------- #
-
-    
+    return G.subgraph(component)
 
 
 def average_distance(G: nx.Graph, iterations: int) -> float:
-    '''Estimate the average distance in the input graph.
-
-    Parameters
-    ----------
-    - param: G : Networkx graph
-        Graph to analyze
-    - param: iterations : int
-        Number of iterations to perform
-    - return: float
-        The estimated average distance in G
-    '''
-
-    avg_distance = None
-    i=0
-    # ------- IMPLEMENT HERE THE BODY OF THE FUNCTION ------- #
     if G.is_directed():
-        G=G.to_undirected()
-    
-    while i < iterations:
-        nodo1=random.choice(list(G.nodes()))
-        nodo2=random.choice(list(G.nodes()))
+        G = G.to_undirected()
+
+    nodes = list(G.nodes())
+    total = 0
+    count = 0
+
+    while count < iterations:
+        a = random.choice(nodes)
+        b = random.choice(nodes)
+        if a == b:
+            continue
         try:
-            avg_distance = nx.shortest_path_length(G, nodo1, nodo2)
+            d = nx.shortest_path_length(G, a, b)
         except nx.NetworkXNoPath:
             continue
-        
-        i += 1
 
-    return avg_distance/iterations
+        total += d
+        count += 1
 
-
-
+    return total / count
 
 
-    # ----------------- END OF FUNCTION --------------------- #
-
-
-
-def deletion_impact(G: nx.Graph, node_list: list, \
+def deletion_impact(G: nx.Graph, node_list: list,
                     grouping_size: int, iterations: int) -> dict:
-    '''Assess the impact of node deletions on the graph average distance.
 
-    Parameters
-    ----------
-    - param: G : Networkx graph
-        Graph to analyze
-    - param: node_list : list
-        List of nodes to delete from the network
-    - param: grouping_size : list
-        The size of the groupings among nodes in the list
-    - param: iterations : int
-        Number of iterations to perform for average distance
-    - return: dict
-        Dictionary with grouping node names tuples as keys and differential
-        average distance as values.
-    '''
-    
     del_impact = {}
-# ------- IMPLEMENT HERE THE BODY OF THE FUNCTION ------- #
+    base = average_distance(G, iterations)
 
-    base_distance = average_distance(G,iterations)
-
-    grupos = combinations(node_list, grouping_size)
-
-    for grupo in grupos:
-        G_copy = G.copy()
-        G_copy.remove_nodes_from(grupo)
-
-        new_distance = average_distance(G_copy, iterations)
-
-        del_impact[tuple(grupo)] = base_distance - new_distance
+    for group in combinations(node_list, grouping_size):
+        Gc = G.copy()
+        Gc.remove_nodes_from(group)
+        new = average_distance(Gc, iterations)
+        del_impact[tuple(group)] = base - new
 
     return del_impact
 
 
+# ===================== EXERCICI 3A ===================== #
+def impact_key(x):
+    return x[1]
 
-
-# ----------------- END OF FUNCTION --------------------- #
 
 if __name__ == "__main__":
 
-    # ------- IMPLEMENT HERE THE MAIN FOR THIS SESSION ------- #
-    import time
-    start_time = time.time()
+    G = nx.read_graphml("Ecoli_TRN.graphml")
 
-    G1=nx.read_graphml('Ecoli_TRN.graphml')
-    G2=nx.read_graphml('Ecoli_operon_TRN.graphml')
-    # APARTAT A
-    component=largest_CC_graph(G1)
-    avg_dist1=average_distance(G1,10000)
-    avg_dist2=nx.average_shortest_path_length(G1)
-    print(f"--- DISTANCIA MEDIA 1 (FUNCIÓN)---\n {avg_dist1}")
-    print(f"--- DISTANCIA MEDIA 2 (NETWORKX)---\n {avg_dist2}")
-    
-    
-    # APARTAT B
+    CC = largest_CC_graph(G).to_undirected()
 
-    TF_nodes = [n for n in component.nodes() if component.nodes[n].get('ntype')=='TF']
+    print("Nodes CC:", CC.number_of_nodes())
+    print("Arestes CC:", CC.number_of_edges())
 
-    impact_individual = deletion_impact(component,TF_nodes, 1, 10000)
+    exact = nx.average_shortest_path_length(CC)
+    print("Distància exacta:", exact)
 
-    top10 = sorted(impact_individual.items(), key=lambda x: x[1], reverse=True)[:10]
-    print(f'\n Top 10 més TF mes impactants')
+    iters_list = [10, 100, 1000, 5000, 10000]
+    for it in iters_list:
+        print(it, "iteracions ->", average_distance(CC, it))
 
-    for nodes, diff in top10:
-        node = nodes[0]
-        print(f"{node} - gene: {component.nodes[node].get('name')}, distancia media: {diff:.2f}")
-    
-    
-    # APARTAT C
-    top30 = [ tf_tuple[0] for tf_tuple, val in 
-          sorted(impact_individual.items(), key=lambda x: x[1], reverse=True)[:30] ]
-
-    impact_pairs = deletion_impact(component, top30, grouping_size=2, iterations=3000)
-
-    top5_pairs = sorted(impact_pairs.items(), key=lambda x: x[1], reverse=True)[:5]
-
-    print("\nTop 5 parelles de TF més impact:")
-    for pair, impact_val in top5_pairs:
-        print(f"  {pair} --> impact = {impact_val:.4f}")
-
-    print("--- %s seconds ---" % (time.time() - start_time))
-    # ------------------- END OF MAIN ------------------------ #
+    N = 10000
+    n = CC.number_of_nodes()
+    total_pairs = n * (n - 1) // 2
+    print("Parelles exactes:", total_pairs)
+    print("Speed-up aprox:", total_pairs / N)
 
 
+    # ===================== EXERCICI 3B ===================== #
+
+    tf_nodes = [node for node, data in CC.nodes(data=True)
+                if data.get("ntype") == "TF"]
+
+    print("TF totals:", len(tf_nodes))
+
+    impact1 = deletion_impact(CC, tf_nodes, 1, N)
+    ordered1 = sorted(impact1.items(), key=impact_key, reverse=True)
+
+    print("Top 10 TF eliminats:")
+    for group, diff in ordered1[:10]:
+        name = CC.nodes[group[0]].get("name", "")
+        print(group[0], name, "impacte:", diff)
 
 
-#fer algo de centralitat amb betwenees
+    # ===================== EXERCICI 3C ===================== #
+
+    top30 = [g[0] for g in ordered1[:30]]
+    impact2 = deletion_impact(CC, top30, 2, N)
+    ordered2 = sorted(impact2.items(), key=impact_key, reverse=True)
+
+    print("Top 5 parelles:")
+    for group, diff in ordered2[:5]:
+        a, b = group
+        n1 = CC.nodes[a].get("name", "")
+        n2 = CC.nodes[b].get("name", "")
+        print(a, n1, "-", b, n2, "impacte:", diff)
+
+
+    # ===================== EXERCICI 3D ===================== #
+
+    best_TF = ordered1[0][0][0]
+    best_name = CC.nodes[best_TF].get("name", "")
+
+    print("\n--- Raonament exercici 3d ---")
+    print("El TF que triaria per deshabilitar parcialment la cèl·lula és:", best_TF, best_name)
+    print("És el que té l'impacte més alt en augmentar la distància mitjana de la xarxa,")
+    print("fet que indica que és estructuralment essencial per mantenir la regulació global.")
+    print("Un antibiòtic que ataqui aquest TF podria afectar molts gens alhora,")
+    print("reduint la capacitat d'adaptació de la cèl·lula i dificultant l'aparició de resistència.")
