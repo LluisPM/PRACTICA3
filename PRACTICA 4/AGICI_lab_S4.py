@@ -66,15 +66,15 @@ def deletion_impact(G: nx.Graph, node_list: list,
     return del_impact
 
 
-# ===================== EXERCICI 3A ===================== #
 def impact_key(x):
     return x[1]
 
 
+# ===================== EXERCICI 3A ===================== #
+
 if __name__ == "__main__":
 
     G = nx.read_graphml("Ecoli_TRN.graphml")
-
     CC = largest_CC_graph(G).to_undirected()
 
     print("Nodes CC:", CC.number_of_nodes())
@@ -112,7 +112,8 @@ if __name__ == "__main__":
 
     # ===================== EXERCICI 3C ===================== #
 
-    top30 = [g[0] for g in ordered1[:30]]
+    top30 = [g[0][0] for g in ordered1[:30]]
+
     impact2 = deletion_impact(CC, top30, 2, N)
     ordered2 = sorted(impact2.items(), key=impact_key, reverse=True)
 
